@@ -84,6 +84,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "date", "quantity", "unit", "totalAmount"]
+    },
+    "FarmUser": {
+      "title": "FarmUser",
+      "description": "Farm user account record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["Admin", "Manager", "Farmer"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role"]
     }
   },
   "firestore": {
@@ -106,6 +118,10 @@
     "/egg_sales/{saleId}": {
       "schema": "EggSale",
       "description": "Egg sales records"
+    },
+    "/farm_users/{recordId}": {
+      "schema": "FarmUser",
+      "description": "Farm user accounts"
     }
   }
 }

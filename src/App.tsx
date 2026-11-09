@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -34,6 +34,7 @@ import {
   Calendar, 
   Plus, 
   Trash2, 
+  Edit2, 
   LogOut, 
   CheckCircle2, 
   TrendingUp, 
@@ -48,10 +49,11 @@ import {
   WifiOff,
   UserCheck,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  UserPlus
 } from 'lucide-react';
 
-// Initialize Firebase
+// Initialize Primary Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 const auth = getAuth(app);
@@ -153,6 +155,13 @@ interface EggSale {
   createdAt: string;
 }
 
+interface FarmUserRecord {
+  id: string;
+  email: string;
+  role: 'Admin' | 'Manager' | 'Farmer';
+  createdAt: string;
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
@@ -179,11 +188,22 @@ export default function App() {
   const [eggRecords, setEggRecords] = useState<EggCollection[]>([]);
   const [milkSales, setMilkSales] = useState<MilkSale[]>([]);
   const [eggSales, setEggSales] = useState<EggSale[]>([]);
+  const [farmUsers, setFarmUsers] = useState<FarmUserRecord[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
 
+  // Admin account creation form states
+  const [newAccountEmail, setNewAccountEmail] = useState<string>('');
+  const [newAccountPassword, setNewAccountPassword] = useState<string>('');
+  const [newAccountRole, setNewAccountRole] = useState<'Admin' | 'Manager' | 'Farmer'>('Farmer');
+  const [creatingAccount, setCreatingAccount] = useState<boolean>(false);
+
   // Modals
   const [modalOpen, setModalOpen] = useState<'cow' | 'milk' | 'egg' | 'milkSale' | 'eggSale' | null>(null);
+
+  // Editing state for milk and egg records
+  const [editingMilkId, setEditingMilkId] = useState<string | null>(null);
+  const [editingEggId, setEditingEggId] = useState<string | null>(null);
 
   // Form states
   const [cowName, setCowName] = useState<string>('');
@@ -247,6 +267,7 @@ export default function App() {
       setEggRecords([]);
       setMilkSales([]);
       setEggSales([]);
+      setFarmUsers([]);
       return;
     }
 
@@ -296,9 +317,19 @@ export default function App() {
       (snapshot: QuerySnapshot) => {
         const list: EggSale[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as EggSale));
         setEggSales(list.sort((a, b) => b.date.localeCompare(a.date)));
-        setLoadingData(false);
       },
       (error: unknown) => handleFirestoreError(error, OperationType.GET, 'egg_sales')
+    );
+
+    // Fetch Farm Users registered by Admin synced to Firestore
+    const unsubUsers = onSnapshot(
+      collection(db, 'farm_users'),
+      (snapshot: QuerySnapshot) => {
+        const list: FarmUserRecord[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as FarmUserRecord));
+        setFarmUsers(list);
+        setLoadingData(false);
+      },
+      (error: unknown) => handleFirestoreError(error, OperationType.GET, 'farm_users')
     );
 
     return () => {
@@ -307,6 +338,7 @@ export default function App() {
       unsubEggs();
       unsubMilkSales();
       unsubEggSales();
+      unsubUsers();
     };
   }, [user]);
 
@@ -365,6 +397,39 @@ export default function App() {
       } catch (err: any) {
         setAuthError(err.message);
       }
+    }
+  };
+
+  // System Admin creating a new account synced to Firebase Auth and Firestore
+  const handleCreateAccountByAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccountEmail || !newAccountPassword) return;
+    setCreatingAccount(true);
+
+    const resolvedEmail = resolveEmail(newAccountEmail);
+
+    try {
+      // Use a secondary Firebase app instance so creating user doesn't log out current Admin session
+      const secondaryApp = initializeApp(firebaseConfig, 'secondaryAuthApp_' + Date.now());
+      const secondaryAuth = getAuth(secondaryApp);
+      
+      await createUserWithEmailAndPassword(secondaryAuth, resolvedEmail, newAccountPassword);
+      await deleteApp(secondaryApp);
+
+      // Sync account record to Firestore
+      await addDoc(collection(db, 'farm_users'), {
+        email: resolvedEmail,
+        role: newAccountRole,
+        createdAt: new Date().toISOString()
+      });
+
+      setNewAccountEmail('');
+      setNewAccountPassword('');
+      setCreatingAccount(false);
+      showToast(`Account "${resolvedEmail}" created and synced to Firebase.`);
+    } catch (err: any) {
+      setCreatingAccount(false);
+      showToast(`Failed to create account: ${err.message || err}`);
     }
   };
 
@@ -469,7 +534,7 @@ export default function App() {
     }
   };
 
-  const handleAddMilk = async (e: React.FormEvent) => {
+  const handleSaveMilk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !milkCowId) return;
     const selectedCow = cows.find((c: Cow) => c.id === milkCowId);
@@ -478,28 +543,52 @@ export default function App() {
     const total = m + ev;
 
     try {
-      await addDoc(collection(db, 'milk_production'), {
-        userId: user.uid,
-        cowId: milkCowId,
-        cowName: selectedCow ? selectedCow.name : 'Unknown',
-        date: milkDate,
-        morningLiters: m,
-        eveningLiters: ev,
-        totalLiters: total,
-        notes: milkNotes,
-        createdAt: new Date().toISOString()
-      });
+      if (editingMilkId) {
+        await updateDoc(doc(db, 'milk_production', editingMilkId), {
+          cowId: milkCowId,
+          cowName: selectedCow ? selectedCow.name : 'Unknown',
+          date: milkDate,
+          morningLiters: m,
+          eveningLiters: ev,
+          totalLiters: total,
+          notes: milkNotes,
+        });
+        showToast(`Milk record updated successfully (${total} Liters).`);
+      } else {
+        await addDoc(collection(db, 'milk_production'), {
+          userId: user.uid,
+          cowId: milkCowId,
+          cowName: selectedCow ? selectedCow.name : 'Unknown',
+          date: milkDate,
+          morningLiters: m,
+          eveningLiters: ev,
+          totalLiters: total,
+          notes: milkNotes,
+          createdAt: new Date().toISOString()
+        });
+        showToast(`Milk recorded: ${total} Liters.`);
+      }
       setMorningLiters('');
       setEveningLiters('');
       setMilkNotes('');
+      setEditingMilkId(null);
       setModalOpen(null);
-      showToast(`Milk recorded: ${total} Liters.`);
     } catch (err: unknown) {
       showToast('Failed to save milk record.');
     }
   };
 
-  const handleAddEgg = async (e: React.FormEvent) => {
+  const openEditMilk = (record: MilkProduction) => {
+    setEditingMilkId(record.id);
+    setMilkCowId(record.cowId);
+    setMilkDate(record.date);
+    setMorningLiters(String(record.morningLiters));
+    setEveningLiters(String(record.eveningLiters));
+    setMilkNotes(record.notes || '');
+    setModalOpen('milk');
+  };
+
+  const handleSaveEgg = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !totalEggs) return;
     const tot = parseInt(totalEggs) || 0;
@@ -507,23 +596,44 @@ export default function App() {
     const net = Math.max(0, tot - brok);
 
     try {
-      await addDoc(collection(db, 'egg_collection'), {
-        userId: user.uid,
-        date: eggDate,
-        totalEggs: tot,
-        brokenEggs: brok,
-        netEggs: net,
-        notes: eggNotes,
-        createdAt: new Date().toISOString()
-      });
+      if (editingEggId) {
+        await updateDoc(doc(db, 'egg_collection', editingEggId), {
+          date: eggDate,
+          totalEggs: tot,
+          brokenEggs: brok,
+          netEggs: net,
+          notes: eggNotes,
+        });
+        showToast(`Egg collection updated successfully (${net} good eggs).`);
+      } else {
+        await addDoc(collection(db, 'egg_collection'), {
+          userId: user.uid,
+          date: eggDate,
+          totalEggs: tot,
+          brokenEggs: brok,
+          netEggs: net,
+          notes: eggNotes,
+          createdAt: new Date().toISOString()
+        });
+        showToast(`Egg collection recorded: ${net} good eggs.`);
+      }
       setTotalEggs('');
       setBrokenEggs('0');
       setEggNotes('');
+      setEditingEggId(null);
       setModalOpen(null);
-      showToast(`Egg collection recorded: ${net} good eggs.`);
     } catch (err: unknown) {
       showToast('Failed to save egg collection.');
     }
+  };
+
+  const openEditEgg = (record: EggCollection) => {
+    setEditingEggId(record.id);
+    setEggDate(record.date);
+    setTotalEggs(String(record.totalEggs));
+    setBrokenEggs(String(record.brokenEggs));
+    setEggNotes(record.notes || '');
+    setModalOpen('egg');
   };
 
   const handleAddMilkSale = async (e: React.FormEvent) => {
@@ -961,14 +1071,28 @@ export default function App() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setModalOpen('milk')}
+                    onClick={() => {
+                      setEditingMilkId(null);
+                      setMilkDate(new Date().toISOString().split('T')[0]);
+                      setMorningLiters('');
+                      setEveningLiters('');
+                      setMilkNotes('');
+                      setModalOpen('milk');
+                    }}
                     className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-4 py-3 rounded-xl shadow transition-all flex items-center gap-2 text-sm min-h-[48px]"
                   >
                     <Milk className="w-5 h-5 text-emerald-700" /> + Add Milk
                   </button>
                   <button
                     type="button"
-                    onClick={() => setModalOpen('egg')}
+                    onClick={() => {
+                      setEditingEggId(null);
+                      setEggDate(new Date().toISOString().split('T')[0]);
+                      setTotalEggs('');
+                      setBrokenEggs('0');
+                      setEggNotes('');
+                      setModalOpen('egg');
+                    }}
                     className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-4 py-3 rounded-xl shadow transition-all flex items-center gap-2 text-sm min-h-[48px]"
                   >
                     <Egg className="w-5 h-5 text-amber-700" /> + Add Eggs
@@ -1064,7 +1188,14 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <button
                   type="button"
-                  onClick={() => setModalOpen('milk')}
+                  onClick={() => {
+                    setEditingMilkId(null);
+                    setMilkDate(new Date().toISOString().split('T')[0]);
+                    setMorningLiters('');
+                    setEveningLiters('');
+                    setMilkNotes('');
+                    setModalOpen('milk');
+                  }}
                   className="p-5 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 hover:border-emerald-600 transition-all flex flex-col items-center text-center group min-h-[110px] justify-center"
                 >
                   <div className="bg-emerald-700 text-white p-3 rounded-xl mb-2">
@@ -1076,7 +1207,14 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => setModalOpen('egg')}
+                  onClick={() => {
+                    setEditingEggId(null);
+                    setEggDate(new Date().toISOString().split('T')[0]);
+                    setTotalEggs('');
+                    setBrokenEggs('0');
+                    setEggNotes('');
+                    setModalOpen('egg');
+                  }}
                   className="p-5 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-600 transition-all flex flex-col items-center text-center group min-h-[110px] justify-center"
                 >
                   <div className="bg-amber-600 text-white p-3 rounded-xl mb-2">
@@ -1200,17 +1338,24 @@ export default function App() {
           </div>
         )}
 
-        {/* Milk Production Tab */}
+        {/* Milk Production Tab with Edit button */}
         {activeTab === 'milk' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Milk Production Logging</h2>
-                <p className="text-slate-500 text-sm mt-0.5">Record daily morning and evening milk collection per cow (Works offline).</p>
+                <p className="text-slate-500 text-sm mt-0.5">Record and update daily morning and evening milk collection per cow.</p>
               </div>
               <button
                 type="button"
-                onClick={() => setModalOpen('milk')}
+                onClick={() => {
+                  setEditingMilkId(null);
+                  setMilkDate(new Date().toISOString().split('T')[0]);
+                  setMorningLiters('');
+                  setEveningLiters('');
+                  setMilkNotes('');
+                  setModalOpen('milk');
+                }}
                 className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-3 rounded-xl shadow transition-colors flex items-center gap-2 text-base min-h-[48px]"
               >
                 <Plus className="w-5 h-5" /> + Log Milk Today
@@ -1237,7 +1382,7 @@ export default function App() {
                         <th className="p-4">Evening (L)</th>
                         <th className="p-4">Total (L)</th>
                         <th className="p-4">Notes</th>
-                        <th className="p-4 text-right">Action</th>
+                        <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -1249,7 +1394,15 @@ export default function App() {
                           <td className="p-4 text-slate-600">{r.eveningLiters} L</td>
                           <td className="p-4 font-bold text-emerald-800">{r.totalLiters} L</td>
                           <td className="p-4 text-slate-500 max-w-xs truncate">{r.notes || '-'}</td>
-                          <td className="p-4 text-right">
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditMilk(r)}
+                              className="text-blue-600 hover:text-blue-800 p-2"
+                              title="Edit Record"
+                            >
+                              <Edit2 className="w-4 h-4 inline" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteItem('milk_production', r.id)}
@@ -1269,17 +1422,24 @@ export default function App() {
           </div>
         )}
 
-        {/* Egg Collection Tab */}
+        {/* Egg Collection Tab with Edit button */}
         {activeTab === 'eggs' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Egg Collection Logging</h2>
-                <p className="text-slate-500 text-sm mt-0.5">Record daily poultry egg collection and track broken eggs (Works offline).</p>
+                <p className="text-slate-500 text-sm mt-0.5">Record and update daily poultry egg collection and broken eggs.</p>
               </div>
               <button
                 type="button"
-                onClick={() => setModalOpen('egg')}
+                onClick={() => {
+                  setEditingEggId(null);
+                  setEggDate(new Date().toISOString().split('T')[0]);
+                  setTotalEggs('');
+                  setBrokenEggs('0');
+                  setEggNotes('');
+                  setModalOpen('egg');
+                }}
                 className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-3 rounded-xl shadow transition-colors flex items-center gap-2 text-base min-h-[48px]"
               >
                 <Plus className="w-5 h-5" /> + Log Eggs Today
@@ -1305,7 +1465,7 @@ export default function App() {
                         <th className="p-4">Broken</th>
                         <th className="p-4">Net Good Eggs</th>
                         <th className="p-4">Notes</th>
-                        <th className="p-4 text-right">Action</th>
+                        <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -1316,7 +1476,15 @@ export default function App() {
                           <td className="p-4 text-red-600">{r.brokenEggs}</td>
                           <td className="p-4 font-bold text-amber-700">{r.netEggs} Eggs</td>
                           <td className="p-4 text-slate-500 max-w-xs truncate">{r.notes || '-'}</td>
-                          <td className="p-4 text-right">
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditEgg(r)}
+                              className="text-blue-600 hover:text-blue-800 p-2"
+                              title="Edit Record"
+                            >
+                              <Edit2 className="w-4 h-4 inline" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteItem('egg_collection', r.id)}
@@ -1342,7 +1510,7 @@ export default function App() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Farm Sales & Revenue</h2>
-                <p className="text-slate-500 text-sm mt-0.5">Track all milk and egg sales to customers and shops (Works offline).</p>
+                <p className="text-slate-500 text-sm mt-0.5">Track all milk and egg sales to customers and shops.</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -1630,7 +1798,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Admin Tab */}
+        {/* Admin Tab with Full Account Creation synced to Firebase */}
         {activeTab === 'admin' && isAdmin && (
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -1638,46 +1806,82 @@ export default function App() {
                 <UserCheck className="w-6 h-6 text-slate-900" /> System Administration & Account Hub
               </h2>
               <p className="text-slate-500 text-sm mt-1">
-                System Admin controls account creation and role assignments for Sunny Acres Farm.
+                System Admin can create new accounts (Farmer Mama, Farm Manager, Admin) which sync immediately to Firebase Auth and Firestore.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Create Account Form */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <h3 className="text-lg font-bold text-slate-900">Configured Farm Roles</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <div>
-                      <p className="font-bold text-slate-900">System Admin</p>
-                      <p className="text-xs text-slate-500">Username: admin@sunnyacres.farm</p>
-                    </div>
-                    <span className="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-full">Full Access</span>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-emerald-700" /> Create New Farm Account
+                </h3>
+                <form onSubmit={handleCreateAccountByAdmin} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Username / Email</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAccountEmail}
+                      onChange={(e) => setNewAccountEmail(e.target.value)}
+                      placeholder="e.g. mama_mary or worker2@sunnyacres.farm"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:ring-2 focus:ring-emerald-600"
+                    />
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <div>
-                      <p className="font-bold text-slate-900">Farm Manager</p>
-                      <p className="text-xs text-slate-500">Username: manager@sunnyacres.farm</p>
-                    </div>
-                    <span className="bg-teal-700 text-white text-xs font-semibold px-3 py-1 rounded-full">Manager Access</span>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={newAccountPassword}
+                      onChange={(e) => setNewAccountPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:ring-2 focus:ring-emerald-600"
+                    />
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <div>
-                      <p className="font-bold text-slate-900">Farmer Mama</p>
-                      <p className="text-xs text-slate-500">Username: farmer.mama@sunnyacres.farm</p>
-                    </div>
-                    <span className="bg-emerald-700 text-white text-xs font-semibold px-3 py-1 rounded-full">Daily Logger</span>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Assign Role</label>
+                    <select
+                      value={newAccountRole}
+                      onChange={(e: any) => setNewAccountRole(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-medium"
+                    >
+                      <option value="Farmer">Farmer (Daily Logging)</option>
+                      <option value="Manager">Farm Manager</option>
+                      <option value="Admin">System Admin</option>
+                    </select>
                   </div>
-                </div>
+
+                  <button
+                    type="submit"
+                    disabled={creatingAccount}
+                    className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow min-h-[48px] disabled:opacity-50"
+                  >
+                    {creatingAccount ? 'Creating & Syncing to Firebase...' : 'Create & Sync Account'}
+                  </button>
+                </form>
               </div>
 
+              {/* Existing Farm Accounts List */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <h3 className="text-lg font-bold text-slate-900">Create New Farm Account</h3>
-                <p className="text-xs text-slate-500">Use the sign-up form after signing out or create new usernames below.</p>
-                <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                  <p className="text-xs text-slate-700 font-medium">
-                    All accounts automatically enjoy secure offline data sync via Firebase persistent local cache.
-                  </p>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900">Active Farm Accounts in Firebase ({farmUsers.length})</h3>
+                {farmUsers.length === 0 ? (
+                  <p className="text-slate-400 text-sm py-4">No additional accounts created yet.</p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {farmUsers.map((usr: FarmUserRecord) => (
+                      <div key={usr.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{usr.email}</p>
+                          <p className="text-xs text-slate-500">Created: {usr.createdAt?.substring(0, 10)}</p>
+                        </div>
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${usr.role === 'Admin' ? 'bg-slate-900 text-white' : usr.role === 'Manager' ? 'bg-teal-700 text-white' : 'bg-emerald-700 text-white'}`}>
+                          {usr.role}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1828,9 +2032,9 @@ export default function App() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Milk className="w-6 h-6 text-emerald-700" /> Log Milk Production
+              <Milk className="w-6 h-6 text-emerald-700" /> {editingMilkId ? 'Edit Milk Production Record' : 'Log Milk Production'}
             </h3>
-            <form onSubmit={handleAddMilk} className="space-y-4">
+            <form onSubmit={handleSaveMilk} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Select Cow</label>
                 {cows.length === 0 ? (
@@ -1841,7 +2045,7 @@ export default function App() {
                     onChange={(e) => setMilkCowId(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-medium"
                   >
-                    {cows.filter((c: Cow) => c.status === 'Active').map((c: Cow) => (
+                    {cows.filter((c: Cow) => c.status === 'Active' || c.id === milkCowId).map((c: Cow) => (
                       <option key={c.id} value={c.id}>{c.name} ({c.breed})</option>
                     ))}
                   </select>
@@ -1897,7 +2101,10 @@ export default function App() {
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(null)}
+                  onClick={() => {
+                    setEditingMilkId(null);
+                    setModalOpen(null);
+                  }}
                   className="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold min-h-[48px]"
                 >
                   Cancel
@@ -1907,7 +2114,7 @@ export default function App() {
                   disabled={cows.length === 0}
                   className="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold shadow min-h-[48px] disabled:opacity-50"
                 >
-                  Save Milk Record
+                  {editingMilkId ? 'Update Record' : 'Save Milk Record'}
                 </button>
               </div>
             </form>
@@ -1919,9 +2126,9 @@ export default function App() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Egg className="w-6 h-6 text-amber-700" /> Log Egg Collection
+              <Egg className="w-6 h-6 text-amber-700" /> {editingEggId ? 'Edit Egg Collection Record' : 'Log Egg Collection'}
             </h3>
-            <form onSubmit={handleAddEgg} className="space-y-4">
+            <form onSubmit={handleSaveEgg} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
                 <input
@@ -1971,7 +2178,10 @@ export default function App() {
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(null)}
+                  onClick={() => {
+                    setEditingEggId(null);
+                    setModalOpen(null);
+                  }}
                   className="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold min-h-[48px]"
                 >
                   Cancel
@@ -1980,7 +2190,7 @@ export default function App() {
                   type="submit"
                   className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow min-h-[48px]"
                 >
-                  Save Egg Record
+                  {editingEggId ? 'Update Record' : 'Save Egg Record'}
                 </button>
               </div>
             </form>
