@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "Cow": {
+      "title": "Cow",
+      "description": "Livestock cow record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "tagNumber": { "type": "string", "maxLength": 50 },
+        "breed": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["Active", "Dry", "Sold"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "status"]
+    },
+    "MilkProduction": {
+      "title": "MilkProduction",
+      "description": "Daily milk production per cow",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "cowId": { "type": "string", "maxLength": 128 },
+        "cowName": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string", "maxLength": 20 },
+        "morningLiters": { "type": "number" },
+        "eveningLiters": { "type": "number" },
+        "totalLiters": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "cowId", "date", "totalLiters"]
+    },
+    "EggCollection": {
+      "title": "EggCollection",
+      "description": "Daily egg collection record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "totalEggs": { "type": "number" },
+        "brokenEggs": { "type": "number" },
+        "netEggs": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "date", "totalEggs", "netEggs"]
+    },
+    "MilkSale": {
+      "title": "MilkSale",
+      "description": "Milk sale transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "litersSold": { "type": "number" },
+        "pricePerLiter": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "buyer": { "type": "string", "maxLength": 150 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "date", "litersSold", "totalAmount"]
+    },
+    "EggSale": {
+      "title": "EggSale",
+      "description": "Egg sale transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string", "enum": ["pieces", "trays"] },
+        "price": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "buyer": { "type": "string", "maxLength": 150 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "date", "quantity", "unit", "totalAmount"]
+    }
+  },
+  "firestore": {
+    "/cows/{cowId}": {
+      "schema": "Cow",
+      "description": "Cows livestock collection owned by user"
+    },
+    "/milk_production/{recordId}": {
+      "schema": "MilkProduction",
+      "description": "Milk production records"
+    },
+    "/egg_collection/{recordId}": {
+      "schema": "EggCollection",
+      "description": "Egg collection records"
+    },
+    "/milk_sales/{saleId}": {
+      "schema": "MilkSale",
+      "description": "Milk sales records"
+    },
+    "/egg_sales/{saleId}": {
+      "schema": "EggSale",
+      "description": "Egg sales records"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Sunny Acres Farm - Farm Management System",
+  "description": "Simple, friendly farm management system for cows and poultry egg production and sales.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
