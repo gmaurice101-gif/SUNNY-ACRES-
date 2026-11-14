@@ -50,7 +50,9 @@ import {
   UserCheck,
   BarChart3,
   RefreshCw,
-  UserPlus
+  UserPlus,
+  CreditCard,
+  TrendingDown
 } from 'lucide-react';
 
 // Initialize Primary Firebase
@@ -155,6 +157,17 @@ interface EggSale {
   createdAt: string;
 }
 
+interface Expense {
+  id: string;
+  userId: string;
+  date: string;
+  category: 'Feed' | 'Medicine' | 'Maintenance' | 'Labor' | 'Utilities' | 'Other';
+  amount: number;
+  vendor: string;
+  notes: string;
+  createdAt: string;
+}
+
 interface FarmUserRecord {
   id: string;
   email: string;
@@ -176,7 +189,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cows' | 'milk' | 'eggs' | 'sales' | 'reports' | 'admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cows' | 'milk' | 'eggs' | 'sales' | 'expenses' | 'reports' | 'admin'>('dashboard');
 
   // Reports sub-tab: 'daily' | 'weekly' | 'monthly'
   const [reportSubTab, setReportSubTab] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -188,6 +201,7 @@ export default function App() {
   const [eggRecords, setEggRecords] = useState<EggCollection[]>([]);
   const [milkSales, setMilkSales] = useState<MilkSale[]>([]);
   const [eggSales, setEggSales] = useState<EggSale[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [farmUsers, setFarmUsers] = useState<FarmUserRecord[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
@@ -199,11 +213,12 @@ export default function App() {
   const [creatingAccount, setCreatingAccount] = useState<boolean>(false);
 
   // Modals
-  const [modalOpen, setModalOpen] = useState<'cow' | 'milk' | 'egg' | 'milkSale' | 'eggSale' | null>(null);
+  const [modalOpen, setModalOpen] = useState<'cow' | 'milk' | 'egg' | 'milkSale' | 'eggSale' | 'expense' | null>(null);
 
-  // Editing state for milk and egg records
+  // Editing state for milk, egg, and expense records
   const [editingMilkId, setEditingMilkId] = useState<string | null>(null);
   const [editingEggId, setEditingEggId] = useState<string | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
   // Form states
   const [cowName, setCowName] = useState<string>('');
@@ -236,6 +251,19 @@ export default function App() {
   const [eggBuyer, setEggBuyer] = useState<string>('');
   const [eggSaleNotes, setEggSaleNotes] = useState<string>('');
 
+  const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [expenseCategory, setExpenseCategory] = useState<'Feed' | 'Medicine' | 'Maintenance' | 'Labor' | 'Utilities' | 'Other'>('Feed');
+  const [expenseAmount, setExpenseAmount] = useState<string>('');
+  const [expenseVendor, setExpenseVendor] = useState<string>('');
+  const [expenseNotes, setExpenseNotes] = useState<string>('');
+
+  const [milkPaymentMethod, setMilkPaymentMethod] = useState<string>('M-Pesa Till');
+  const [milkMpesaCode, setMilkMpesaCode] = useState<string>('');
+  const [eggPaymentMethod, setEggPaymentMethod] = useState<string>('M-Pesa Till');
+  const [eggMpesaCode, setEggMpesaCode] = useState<string>('');
+  const [expensePaymentMethod, setExpensePaymentMethod] = useState<string>('M-Pesa Till');
+  const [expenseMpesaCode, setExpenseMpesaCode] = useState<string>('');
+
   // Monitor online / offline status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -267,6 +295,7 @@ export default function App() {
       setEggRecords([]);
       setMilkSales([]);
       setEggSales([]);
+      setExpenses([]);
       setFarmUsers([]);
       return;
     }
@@ -321,6 +350,15 @@ export default function App() {
       (error: unknown) => handleFirestoreError(error, OperationType.GET, 'egg_sales')
     );
 
+    const unsubExpenses = onSnapshot(
+      query(collection(db, 'expenses'), where('userId', '==', user.uid)),
+      (snapshot: QuerySnapshot) => {
+        const list: Expense[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as Expense));
+        setExpenses(list.sort((a, b) => b.date.localeCompare(a.date)));
+      },
+      (error: unknown) => handleFirestoreError(error, OperationType.GET, 'expenses')
+    );
+
     // Fetch Farm Users registered by Admin synced to Firestore
     const unsubUsers = onSnapshot(
       collection(db, 'farm_users'),
@@ -338,6 +376,7 @@ export default function App() {
       unsubEggs();
       unsubMilkSales();
       unsubEggSales();
+      unsubExpenses();
       unsubUsers();
     };
   }, [user]);
@@ -503,6 +542,20 @@ export default function App() {
         createdAt: new Date().toISOString()
       });
 
+      const sampleExpenses = [
+        { date: today, category: 'Feed' as const, amount: 150.00, vendor: 'Agro Feed Ltd', notes: 'Dairy meal 10 bags' },
+        { date: today, category: 'Medicine' as const, amount: 45.00, vendor: 'VetCare Shop', notes: 'Dewormer and vitamins' },
+        { date: today, category: 'Utilities' as const, amount: 30.00, vendor: 'Power & Water', notes: 'Farm pump electricity' }
+      ];
+
+      for (const ex of sampleExpenses) {
+        await addDoc(collection(db, 'expenses'), {
+          userId: user.uid,
+          ...ex,
+          createdAt: new Date().toISOString()
+        });
+      }
+
       showToast('Sample farm data loaded successfully.');
       setLoadingData(false);
     } catch (err: unknown) {
@@ -651,14 +704,17 @@ export default function App() {
         pricePerLiter: p,
         totalAmount: total,
         buyer: milkBuyer || 'General Buyer',
+        paymentMethod: milkPaymentMethod,
+        mpesaCode: milkMpesaCode || (milkPaymentMethod.includes('M-Pesa') ? 'MPESA-' + Math.random().toString(36).substring(2, 8).toUpperCase() : ''),
         notes: milkSaleNotes,
         createdAt: new Date().toISOString()
       });
       setLitersSold('');
       setMilkBuyer('');
+      setMilkMpesaCode('');
       setMilkSaleNotes('');
       setModalOpen(null);
-      showToast(`Milk sale recorded: $${total.toFixed(2)}.`);
+      showToast(`Milk sale recorded: $${total.toFixed(2)} (${milkPaymentMethod}).`);
     } catch (err: unknown) {
       showToast('Failed to save milk sale.');
     }
@@ -680,18 +736,73 @@ export default function App() {
         price: pr,
         totalAmount: total,
         buyer: eggBuyer || 'General Buyer',
+        paymentMethod: eggPaymentMethod,
+        mpesaCode: eggMpesaCode || (eggPaymentMethod.includes('M-Pesa') ? 'MPESA-' + Math.random().toString(36).substring(2, 8).toUpperCase() : ''),
         notes: eggSaleNotes,
         createdAt: new Date().toISOString()
       });
       setEggQuantity('');
       setEggPrice('');
       setEggBuyer('');
+      setEggMpesaCode('');
       setEggSaleNotes('');
       setModalOpen(null);
-      showToast(`Egg sale recorded: $${total.toFixed(2)}.`);
+      showToast(`Egg sale recorded: $${total.toFixed(2)} (${eggPaymentMethod}).`);
     } catch (err: unknown) {
       showToast('Failed to save egg sale.');
     }
+  };
+
+  const handleSaveExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !expenseAmount) return;
+    const amt = parseFloat(expenseAmount) || 0;
+
+    try {
+      if (editingExpenseId) {
+        await updateDoc(doc(db, 'expenses', editingExpenseId), {
+          date: expenseDate,
+          category: expenseCategory,
+          amount: amt,
+          vendor: expenseVendor || 'General Vendor',
+          paymentMethod: expensePaymentMethod,
+          mpesaCode: expenseMpesaCode,
+          notes: expenseNotes,
+        });
+        showToast(`Expense updated successfully ($${amt.toFixed(2)}).`);
+      } else {
+        await addDoc(collection(db, 'expenses'), {
+          userId: user.uid,
+          date: expenseDate,
+          category: expenseCategory,
+          amount: amt,
+          vendor: expenseVendor || 'General Vendor',
+          paymentMethod: expensePaymentMethod,
+          mpesaCode: expenseMpesaCode,
+          notes: expenseNotes,
+          createdAt: new Date().toISOString()
+        });
+        showToast(`Expense paid via ${expensePaymentMethod}: $${amt.toFixed(2)}.`);
+      }
+      setExpenseAmount('');
+      setExpenseVendor('');
+      setExpenseMpesaCode('');
+      setExpenseNotes('');
+      setEditingExpenseId(null);
+      setModalOpen(null);
+    } catch (err: unknown) {
+      showToast('Failed to save expense record.');
+    }
+  };
+
+  const openEditExpense = (record: Expense) => {
+    setEditingExpenseId(record.id);
+    setExpenseDate(record.date);
+    setExpenseCategory(record.category);
+    setExpenseAmount(String(record.amount));
+    setExpenseVendor(record.vendor || '');
+    setExpenseNotes(record.notes || '');
+    setModalOpen('expense');
   };
 
   const handleDeleteItem = async (collName: string, id: string) => {
@@ -732,6 +843,13 @@ export default function App() {
     .filter((s: EggSale) => s.date === todayStr)
     .reduce((acc: number, curr: EggSale) => acc + (curr.totalAmount || 0), 0);
 
+  const todayExpensesTotal = expenses
+    .filter((e: Expense) => e.date === todayStr)
+    .reduce((acc: number, curr: Expense) => acc + (curr.amount || 0), 0);
+
+  const todayTotalRevenue = todayMilkSalesAmount + todayEggSalesAmount;
+  const todayNetProfit = todayTotalRevenue - todayExpensesTotal;
+
   const weeklyMilkTotal = milkRecords
     .filter((r: MilkProduction) => isDateInCurrentWeek(r.date))
     .reduce((acc: number, curr: MilkProduction) => acc + (curr.totalLiters || 0), 0);
@@ -747,6 +865,13 @@ export default function App() {
   const weeklyEggSalesAmount = eggSales
     .filter((s: EggSale) => isDateInCurrentWeek(s.date))
     .reduce((acc: number, curr: EggSale) => acc + (curr.totalAmount || 0), 0);
+
+  const weeklyExpensesTotal = expenses
+    .filter((e: Expense) => isDateInCurrentWeek(e.date))
+    .reduce((acc: number, curr: Expense) => acc + (curr.amount || 0), 0);
+
+  const weeklyTotalRevenue = weeklyMilkSalesAmount + weeklyEggSalesAmount;
+  const weeklyNetProfit = weeklyTotalRevenue - weeklyExpensesTotal;
 
   // Monthly Aggregations for Selected Year
   const monthNames = [
@@ -774,13 +899,20 @@ export default function App() {
       .filter((s: EggSale) => s.date && s.date.startsWith(yearPrefix))
       .reduce((acc: number, curr: EggSale) => acc + (curr.totalAmount || 0), 0);
 
+    const exTotal = expenses
+      .filter((e: Expense) => e.date && e.date.startsWith(yearPrefix))
+      .reduce((acc: number, curr: Expense) => acc + (curr.amount || 0), 0);
+
+    const totalRev = msTotal + esTotal;
     return {
       monthName,
       milkLiters: mTotal,
       eggsCollected: eTotal,
       milkRevenue: msTotal,
       eggRevenue: esTotal,
-      totalRevenue: msTotal + esTotal
+      totalRevenue: totalRev,
+      totalExpenses: exTotal,
+      netProfit: totalRev - exTotal
     };
   });
 
@@ -1003,6 +1135,13 @@ export default function App() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('expenses')}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'expenses' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            <CreditCard className="w-4 h-4" /> Expenses Log
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('reports')}
             className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'reports' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
           >
@@ -1104,6 +1243,21 @@ export default function App() {
                   >
                     <DollarSign className="w-5 h-5" /> + Record Sale
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingExpenseId(null);
+                      setExpenseDate(new Date().toISOString().split('T')[0]);
+                      setExpenseCategory('Feed');
+                      setExpenseAmount('');
+                      setExpenseVendor('');
+                      setExpenseNotes('');
+                      setModalOpen('expense');
+                    }}
+                    className="bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-3 rounded-xl shadow transition-all flex items-center gap-2 text-sm min-h-[48px]"
+                  >
+                    <CreditCard className="w-5 h-5" /> + Record Expense
+                  </button>
                 </div>
               </div>
             </div>
@@ -1185,7 +1339,7 @@ export default function App() {
 
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 mb-4">Quick Daily Actions</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -1246,6 +1400,26 @@ export default function App() {
                   </div>
                   <span className="font-bold text-slate-900 text-base">Record Egg Sale</span>
                   <span className="text-xs text-slate-500 mt-0.5">Track trays, pieces & price</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingExpenseId(null);
+                    setExpenseDate(new Date().toISOString().split('T')[0]);
+                    setExpenseCategory('Feed');
+                    setExpenseAmount('');
+                    setExpenseVendor('');
+                    setExpenseNotes('');
+                    setModalOpen('expense');
+                  }}
+                  className="p-5 rounded-xl border-2 border-dashed border-red-300 bg-red-50/50 hover:bg-red-50 hover:border-red-600 transition-all flex flex-col items-center text-center group min-h-[110px] justify-center"
+                >
+                  <div className="bg-red-700 text-white p-3 rounded-xl mb-2">
+                    <CreditCard className="w-6 h-6" />
+                  </div>
+                  <span className="font-bold text-slate-900 text-base">Record Expense</span>
+                  <span className="text-xs text-slate-500 mt-0.5">Track feed, meds & utilities</span>
                 </button>
               </div>
             </div>
@@ -1610,6 +1784,103 @@ export default function App() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Expenses Tab */}
+        {activeTab === 'expenses' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Farm Operating Expenses</h2>
+                <p className="text-slate-500 text-sm mt-0.5">Track feed, medicine, maintenance, labor, and utility costs.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingExpenseId(null);
+                  setExpenseDate(new Date().toISOString().split('T')[0]);
+                  setExpenseCategory('Feed');
+                  setExpenseAmount('');
+                  setExpenseVendor('');
+                  setExpenseNotes('');
+                  setModalOpen('expense');
+                }}
+                className="bg-red-700 hover:bg-red-800 text-white font-bold px-5 py-3 rounded-xl shadow transition-colors flex items-center gap-2 text-base min-h-[48px]"
+              >
+                <Plus className="w-5 h-5" /> + Add Expense
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-red-700" /> Expense Records
+                </h3>
+              </div>
+              {expenses.length === 0 ? (
+                <div className="p-12 text-center text-slate-400">
+                  <CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-600 font-medium">No expenses recorded yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
+                        <th className="p-4">Date</th>
+                        <th className="p-4">Category</th>
+                        <th className="p-4">Vendor / Paid To</th>
+                        <th className="p-4">Amount ($)</th>
+                        <th className="p-4">Notes</th>
+                        <th className="p-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-sm">
+                      {expenses.map((e: Expense) => (
+                        <tr key={e.id} className="hover:bg-slate-50/50">
+                          <td className="p-4 font-medium text-slate-900">{e.date}</td>
+                          <td className="p-4">
+                            <span className="bg-slate-100 text-slate-800 font-semibold px-2.5 py-1 rounded-full text-xs">
+                              {e.category}
+                            </span>
+                          </td>
+                          <td className="p-4 font-bold text-slate-900">{e.vendor}</td>
+                          <td className="p-4 font-bold text-red-700">${e.amount.toFixed(2)}</td>
+                          <td className="p-4 text-slate-500 max-w-xs truncate">{e.notes || '-'}</td>
+                          <td className="p-4 text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingExpenseId(e.id);
+                                setExpenseDate(e.date);
+                                setExpenseCategory(e.category);
+                                setExpenseAmount(String(e.amount));
+                                setExpenseVendor(e.vendor);
+                                setExpenseNotes(e.notes);
+                                setModalOpen('expense');
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-2"
+                              title="Edit Expense"
+                            >
+                              <Edit2 className="w-4 h-4 inline" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem('expenses', e.id)}
+                              className="text-red-600 hover:text-red-800 p-2"
+                              title="Delete Expense"
+                            >
+                              <Trash2 className="w-4 h-4 inline" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2263,6 +2534,34 @@ export default function App() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Payment Method</label>
+                <select
+                  value={milkPaymentMethod}
+                  onChange={(e) => setMilkPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-medium text-emerald-800"
+                >
+                  <option value="M-Pesa Till">M-Pesa Till (Buy Goods: 889922)</option>
+                  <option value="M-Pesa Paybill">M-Pesa Paybill</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              {milkPaymentMethod.includes('M-Pesa') && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">M-Pesa Confirmation Code (Optional)</label>
+                  <input
+                    type="text"
+                    value={milkMpesaCode}
+                    onChange={(e) => setMilkMpesaCode(e.target.value)}
+                    placeholder="e.g. QJH829XYZ1"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base font-mono uppercase"
+                  />
+                  <p className="text-xs text-emerald-700 mt-1">Sunny Acres Farm Till: <strong>889922</strong> (Sunny Acres Farm Ltd)</p>
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -2359,6 +2658,34 @@ export default function App() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Payment Method</label>
+                <select
+                  value={eggPaymentMethod}
+                  onChange={(e) => setEggPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-medium text-purple-800"
+                >
+                  <option value="M-Pesa Till">M-Pesa Till (Buy Goods: 889922)</option>
+                  <option value="M-Pesa Paybill">M-Pesa Paybill</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              {eggPaymentMethod.includes('M-Pesa') && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">M-Pesa Confirmation Code (Optional)</label>
+                  <input
+                    type="text"
+                    value={eggMpesaCode}
+                    onChange={(e) => setEggMpesaCode(e.target.value)}
+                    placeholder="e.g. QJH829XYZ1"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base font-mono uppercase"
+                  />
+                  <p className="text-xs text-purple-700 mt-1">Sunny Acres Farm Till: <strong>889922</strong> (Sunny Acres Farm Ltd)</p>
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -2372,6 +2699,123 @@ export default function App() {
                   className="px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold shadow min-h-[48px]"
                 >
                   Save Egg Sale
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modalOpen === 'expense' && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <CreditCard className="w-6 h-6 text-red-700" /> {editingExpenseId ? 'Edit Farm Expense' : 'Add Farm Expense'}
+            </h3>
+            <form onSubmit={handleSaveExpense} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={expenseDate}
+                  onChange={(e) => setExpenseDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Category</label>
+                  <select
+                    value={expenseCategory}
+                    onChange={(e: any) => setExpenseCategory(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white"
+                  >
+                    <option value="Feed">Feed</option>
+                    <option value="Medicine">Medicine</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Labor">Labor</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Amount ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min="0"
+                    value={expenseAmount}
+                    onChange={(e) => setExpenseAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Vendor / Paid To</label>
+                <input
+                  type="text"
+                  value={expenseVendor}
+                  onChange={(e) => setExpenseVendor(e.target.value)}
+                  placeholder="e.g. Agro Feed Ltd"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Notes (Optional)</label>
+                <input
+                  type="text"
+                  value={expenseNotes}
+                  onChange={(e) => setExpenseNotes(e.target.value)}
+                  placeholder="e.g. 10 bags of dairy meal"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Payment Method</label>
+                <select
+                  value={expensePaymentMethod}
+                  onChange={(e) => setExpensePaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-medium text-red-800"
+                >
+                  <option value="M-Pesa Till">M-Pesa Till / Paybill</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              {expensePaymentMethod.includes('M-Pesa') && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">M-Pesa Confirmation Code / Receipt</label>
+                  <input
+                    type="text"
+                    value={expenseMpesaCode}
+                    onChange={(e) => setExpenseMpesaCode(e.target.value)}
+                    placeholder="e.g. QJH829XYZ1"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base font-mono uppercase"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingExpenseId(null);
+                    setModalOpen(null);
+                  }}
+                  className="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold min-h-[48px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-red-700 hover:bg-red-800 text-white rounded-xl font-bold shadow min-h-[48px]"
+                >
+                  {editingExpenseId ? 'Update Expense' : 'Save Expense'}
                 </button>
               </div>
             </form>

@@ -96,6 +96,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "email", "role"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Farm expense transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "category": { "type": "string", "enum": ["Feed", "Medicine", "Maintenance", "Labor", "Utilities", "Other"] },
+        "amount": { "type": "number" },
+        "vendor": { "type": "string", "maxLength": 150 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "date", "category", "amount"]
     }
   },
   "firestore": {
@@ -122,6 +138,10 @@
     "/farm_users/{recordId}": {
       "schema": "FarmUser",
       "description": "Farm user accounts"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Farm operating expenses"
     }
   }
 }
