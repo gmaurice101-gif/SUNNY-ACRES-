@@ -394,6 +394,36 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
+  const renderDatePresets = (setDate: (val: string) => void) => {
+    const setPreset = (daysAgoOrMonth: string) => {
+      const d = new Date();
+      if (daysAgoOrMonth === 'today') {
+        // today
+      } else if (daysAgoOrMonth === 'yesterday') {
+        d.setDate(d.getDate() - 1);
+      } else if (daysAgoOrMonth === 'lastWeek') {
+        d.setDate(d.getDate() - 7);
+      } else if (daysAgoOrMonth === 'lastMonth1') {
+        d.setMonth(d.getMonth() - 1);
+        d.setDate(1);
+      } else if (daysAgoOrMonth === 'lastMonth15') {
+        d.setMonth(d.getMonth() - 1);
+        d.setDate(15);
+      }
+      setDate(d.toISOString().split('T')[0]);
+    };
+
+    return (
+      <div className="flex flex-wrap gap-1 mb-1.5">
+        <button type="button" onClick={() => setPreset('today')} className="text-xs bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 px-2 py-0.5 rounded font-medium">Today</button>
+        <button type="button" onClick={() => setPreset('yesterday')} className="text-xs bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 px-2 py-0.5 rounded font-medium">Yesterday</button>
+        <button type="button" onClick={() => setPreset('lastWeek')} className="text-xs bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 px-2 py-0.5 rounded font-medium">1 Wk Ago</button>
+        <button type="button" onClick={() => setPreset('lastMonth1')} className="text-xs bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 px-2 py-0.5 rounded font-medium">1st Last Mo.</button>
+        <button type="button" onClick={() => setPreset('lastMonth15')} className="text-xs bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 px-2 py-0.5 rounded font-medium">15th Last Mo.</button>
+      </div>
+    );
+  };
+
   const resolveEmail = (input: string) => {
     const clean = input.trim().toLowerCase();
     if (clean === 'admin' || clean === 'systemadmin') return 'admin@sunnyacres.farm';
@@ -2446,6 +2476,7 @@ export default function App() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                {renderDatePresets(setMilkDate)}
                 <input
                   type="date"
                   required
@@ -2524,6 +2555,7 @@ export default function App() {
             <form onSubmit={handleSaveEgg} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                {renderDatePresets(setEggDate)}
                 <input
                   type="date"
                   required
@@ -2600,6 +2632,7 @@ export default function App() {
             <form onSubmit={handleAddMilkSale} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                {renderDatePresets(setMilkSaleDate)}
                 <input
                   type="date"
                   required
@@ -2725,6 +2758,7 @@ export default function App() {
             <form onSubmit={handleAddEggSale} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                {renderDatePresets(setEggSaleDate)}
                 <input
                   type="date"
                   required
@@ -2861,6 +2895,7 @@ export default function App() {
             <form onSubmit={handleSaveExpense} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                {renderDatePresets(setExpenseDate)}
                 <input
                   type="date"
                   required
