@@ -140,6 +140,9 @@ interface MilkSale {
   pricePerLiter: number;
   totalAmount: number;
   buyer: string;
+  paymentMethod: string;
+  paymentStatus: 'Paid' | 'Outstanding';
+  mpesaCode?: string;
   notes: string;
   createdAt: string;
 }
@@ -153,6 +156,9 @@ interface EggSale {
   price: number;
   totalAmount: number;
   buyer: string;
+  paymentMethod: string;
+  paymentStatus: 'Paid' | 'Outstanding';
+  mpesaCode?: string;
   notes: string;
   createdAt: string;
 }
@@ -258,8 +264,10 @@ export default function App() {
   const [expenseNotes, setExpenseNotes] = useState<string>('');
 
   const [milkPaymentMethod, setMilkPaymentMethod] = useState<string>('M-Pesa Till');
+  const [milkPaymentStatus, setMilkPaymentStatus] = useState<'Paid' | 'Outstanding'>('Paid');
   const [milkMpesaCode, setMilkMpesaCode] = useState<string>('');
   const [eggPaymentMethod, setEggPaymentMethod] = useState<string>('M-Pesa Till');
+  const [eggPaymentStatus, setEggPaymentStatus] = useState<'Paid' | 'Outstanding'>('Paid');
   const [eggMpesaCode, setEggMpesaCode] = useState<string>('');
   const [expensePaymentMethod, setExpensePaymentMethod] = useState<string>('M-Pesa Till');
   const [expenseMpesaCode, setExpenseMpesaCode] = useState<string>('');
@@ -705,7 +713,8 @@ export default function App() {
         totalAmount: total,
         buyer: milkBuyer || 'General Buyer',
         paymentMethod: milkPaymentMethod,
-        mpesaCode: milkMpesaCode || (milkPaymentMethod.includes('M-Pesa') ? 'MPESA-' + Math.random().toString(36).substring(2, 8).toUpperCase() : ''),
+        paymentStatus: milkPaymentStatus,
+        mpesaCode: milkMpesaCode || (milkPaymentMethod.includes('M-Pesa') && milkPaymentStatus === 'Paid' ? 'MPESA-' + Math.random().toString(36).substring(2, 8).toUpperCase() : ''),
         notes: milkSaleNotes,
         createdAt: new Date().toISOString()
       });
@@ -713,8 +722,9 @@ export default function App() {
       setMilkBuyer('');
       setMilkMpesaCode('');
       setMilkSaleNotes('');
+      setMilkPaymentStatus('Paid');
       setModalOpen(null);
-      showToast(`Milk sale recorded: $${total.toFixed(2)} (${milkPaymentMethod}).`);
+      showToast(`Milk sale recorded: $${total.toFixed(2)} (${milkPaymentMethod} - ${milkPaymentStatus}).`);
     } catch (err: unknown) {
       showToast('Failed to save milk sale.');
     }
@@ -737,7 +747,8 @@ export default function App() {
         totalAmount: total,
         buyer: eggBuyer || 'General Buyer',
         paymentMethod: eggPaymentMethod,
-        mpesaCode: eggMpesaCode || (eggPaymentMethod.includes('M-Pesa') ? 'MPESA-' + Math.random().toString(36).substring(2, 8).toUpperCase() : ''),
+        paymentStatus: eggPaymentStatus,
+        mpesaCode: eggMpesaCode || (eggPaymentMethod.includes('M-Pesa') && eggPaymentStatus === 'Paid' ? 'MPESA-' + Math.random().toString(36).substring(2, 8).toUpperCase() : ''),
         notes: eggSaleNotes,
         createdAt: new Date().toISOString()
       });
@@ -746,8 +757,9 @@ export default function App() {
       setEggBuyer('');
       setEggMpesaCode('');
       setEggSaleNotes('');
+      setEggPaymentStatus('Paid');
       setModalOpen(null);
-      showToast(`Egg sale recorded: $${total.toFixed(2)} (${eggPaymentMethod}).`);
+      showToast(`Egg sale recorded: $${total.toFixed(2)} (${eggPaymentMethod} - ${eggPaymentStatus}).`);
     } catch (err: unknown) {
       showToast('Failed to save egg sale.');
     }
@@ -865,6 +877,31 @@ export default function App() {
   const weeklyEggSalesAmount = eggSales
     .filter((s: EggSale) => isDateInCurrentWeek(s.date))
     .reduce((acc: number, curr: EggSale) => acc + (curr.totalAmount || 0), 0);
+
+  const allSales = [
+    ...milkSales.map(s => ({ ...s, saleType: 'Milk' })),
+    ...eggSales.map(s => ({ ...s, saleType: 'Eggs' }))
+  ];
+
+  const totalPaidRevenue = allSales
+    .filter(s => s.paymentStatus !== 'Outstanding')
+    .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+
+  const totalOutstandingRevenue = allSales
+    .filter(s => s.paymentStatus === 'Outstanding')
+    .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+
+  const mpesaRevenue = allSales
+    .filter(s => (s.paymentMethod || '').includes('M-Pesa') && s.paymentStatus !== 'Outstanding')
+    .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+
+  const cashRevenue = allSales
+    .filter(s => (s.paymentMethod || '').includes('Cash') && s.paymentStatus !== 'Outstanding')
+    .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+
+  const otherRevenue = totalPaidRevenue - mpesaRevenue - cashRevenue;
+
+  const outstandingSalesList = allSales.filter(s => s.paymentStatus === 'Outstanding');
 
   const weeklyExpensesTotal = expenses
     .filter((e: Expense) => isDateInCurrentWeek(e.date))
@@ -1684,7 +1721,7 @@ export default function App() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Farm Sales & Revenue</h2>
-                <p className="text-slate-500 text-sm mt-0.5">Track all milk and egg sales to customers and shops.</p>
+                <p className="text-slate-500 text-sm mt-0.5">Track all milk and egg sales, payment methods (M-Pesa/Cash), and outstanding balances.</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -1719,8 +1756,8 @@ export default function App() {
                       <thead>
                         <tr className="bg-slate-50 text-slate-600 text-xs font-semibold border-b border-slate-200">
                           <th className="p-3">Date</th>
-                          <th className="p-3">Liters</th>
-                          <th className="p-3">Buyer</th>
+                          <th className="p-3">Liters & Buyer</th>
+                          <th className="p-3">Method & Status</th>
                           <th className="p-3">Total ($)</th>
                           <th className="p-3 text-right">Action</th>
                         </tr>
@@ -1729,8 +1766,16 @@ export default function App() {
                         {milkSales.map((s: MilkSale) => (
                           <tr key={s.id}>
                             <td className="p-3 font-medium">{s.date}</td>
-                            <td className="p-3">{s.litersSold} L</td>
-                            <td className="p-3 text-slate-600">{s.buyer}</td>
+                            <td className="p-3">
+                              <p className="font-bold text-slate-900">{s.litersSold} L</p>
+                              <p className="text-xs text-slate-500">{s.buyer}</p>
+                            </td>
+                            <td className="p-3">
+                              <span className="text-xs font-medium text-slate-700 block">{s.paymentMethod || 'Cash'}</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${s.paymentStatus === 'Outstanding' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                {s.paymentStatus || 'Paid'}
+                              </span>
+                            </td>
                             <td className="p-3 font-bold text-blue-800">${s.totalAmount.toFixed(2)}</td>
                             <td className="p-3 text-right">
                               <button type="button" onClick={() => handleDeleteItem('milk_sales', s.id)} className="text-red-600 p-1">
@@ -1759,8 +1804,8 @@ export default function App() {
                       <thead>
                         <tr className="bg-slate-50 text-slate-600 text-xs font-semibold border-b border-slate-200">
                           <th className="p-3">Date</th>
-                          <th className="p-3">Qty</th>
-                          <th className="p-3">Buyer</th>
+                          <th className="p-3">Qty & Buyer</th>
+                          <th className="p-3">Method & Status</th>
                           <th className="p-3">Total ($)</th>
                           <th className="p-3 text-right">Action</th>
                         </tr>
@@ -1769,8 +1814,16 @@ export default function App() {
                         {eggSales.map((s: EggSale) => (
                           <tr key={s.id}>
                             <td className="p-3 font-medium">{s.date}</td>
-                            <td className="p-3">{s.quantity} {s.unit}</td>
-                            <td className="p-3 text-slate-600">{s.buyer}</td>
+                            <td className="p-3">
+                              <p className="font-bold text-slate-900">{s.quantity} {s.unit}</p>
+                              <p className="text-xs text-slate-500">{s.buyer}</p>
+                            </td>
+                            <td className="p-3">
+                              <span className="text-xs font-medium text-slate-700 block">{s.paymentMethod || 'Cash'}</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${s.paymentStatus === 'Outstanding' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                {s.paymentStatus || 'Paid'}
+                              </span>
+                            </td>
                             <td className="p-3 font-bold text-purple-800">${s.totalAmount.toFixed(2)}</td>
                             <td className="p-3 text-right">
                               <button type="button" onClick={() => handleDeleteItem('egg_sales', s.id)} className="text-red-600 p-1">
@@ -2066,6 +2119,75 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            {/* Farm Manager Payment Methods & Outstanding Debt Report Component */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-emerald-700" /> Sales Payment Methods & Outstanding Balances Report
+                </h3>
+                <p className="text-slate-500 text-sm mt-0.5">Farm Manager overview of M-Pesa vs Cash revenue and credit/unpaid customer debts.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                  <p className="text-xs font-semibold text-emerald-800">Total Paid Revenue</p>
+                  <p className="text-2xl font-bold text-emerald-900 mt-1">${totalPaidRevenue.toFixed(2)}</p>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                  <p className="text-xs font-semibold text-amber-800">Outstanding (Unpaid) Debt</p>
+                  <p className="text-2xl font-bold text-amber-900 mt-1">${totalOutstandingRevenue.toFixed(2)}</p>
+                </div>
+                <div className="bg-teal-50 p-4 rounded-xl border border-teal-200">
+                  <p className="text-xs font-semibold text-teal-800">M-Pesa Revenue</p>
+                  <p className="text-2xl font-bold text-teal-900 mt-1">${mpesaRevenue.toFixed(2)}</p>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                  <p className="text-xs font-semibold text-blue-800">Cash & Other Revenue</p>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">${(cashRevenue + otherRevenue).toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-slate-900 text-base mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600" /> Outstanding Customer Balances / Debt Ledger ({outstandingSalesList.length})
+                </h4>
+                {outstandingSalesList.length === 0 ? (
+                  <div className="p-6 bg-slate-50 rounded-xl text-center text-slate-500 text-sm border border-slate-100">
+                    No outstanding credit sales! All customers are fully paid up.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+                          <th className="p-3">Date</th>
+                          <th className="p-3">Type</th>
+                          <th className="p-3">Customer / Buyer</th>
+                          <th className="p-3">Method</th>
+                          <th className="p-3 text-right">Amount Owed ($)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {outstandingSalesList.map((s: any) => (
+                          <tr key={s.id} className="hover:bg-amber-50/40">
+                            <td className="p-3 font-medium">{s.date}</td>
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.saleType === 'Milk' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                                {s.saleType}
+                              </span>
+                            </td>
+                            <td className="p-3 font-bold text-slate-900">{s.buyer}</td>
+                            <td className="p-3 text-slate-600">{s.paymentMethod || 'Cash'}</td>
+                            <td className="p-3 text-right font-bold text-amber-700">${s.totalAmount.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -2548,7 +2670,19 @@ export default function App() {
                 </select>
               </div>
 
-              {milkPaymentMethod.includes('M-Pesa') && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Payment Status</label>
+                <select
+                  value={milkPaymentStatus}
+                  onChange={(e: any) => setMilkPaymentStatus(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-bold text-slate-900"
+                >
+                  <option value="Paid">Paid (Completed)</option>
+                  <option value="Outstanding">Outstanding (Credit / Unpaid)</option>
+                </select>
+              </div>
+
+              {milkPaymentMethod.includes('M-Pesa') && milkPaymentStatus === 'Paid' && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">M-Pesa Confirmation Code (Optional)</label>
                   <input
@@ -2672,7 +2806,19 @@ export default function App() {
                 </select>
               </div>
 
-              {eggPaymentMethod.includes('M-Pesa') && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Payment Status</label>
+                <select
+                  value={eggPaymentStatus}
+                  onChange={(e: any) => setEggPaymentStatus(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base bg-white font-bold text-slate-900"
+                >
+                  <option value="Paid">Paid (Completed)</option>
+                  <option value="Outstanding">Outstanding (Credit / Unpaid)</option>
+                </select>
+              </div>
+
+              {eggPaymentMethod.includes('M-Pesa') && eggPaymentStatus === 'Paid' && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">M-Pesa Confirmation Code (Optional)</label>
                   <input
