@@ -503,10 +503,20 @@ export default function App() {
       setNewAccountEmail('');
       setNewAccountPassword('');
       setCreatingAccount(false);
-      showToast(`Account "Ksh ${resolvedEmail}" created and synced to Firebase.`);
+      showToast(`Account "${resolvedEmail}" created and synced to Firebase.`);
     } catch (err: any) {
       setCreatingAccount(false);
-      showToast(`Failed to create account: Ksh ${err.message || err}`);
+      showToast(`Failed to create account: ${err.message || err}`);
+    }
+  };
+
+  const handleDeleteFarmUser = async (id: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to delete account "${email}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'farm_users', id));
+      showToast(`Account "${email}" removed successfully.`);
+    } catch (err: any) {
+      showToast(`Failed to delete account: ${err.message || err}`);
     }
   };
 
@@ -2308,9 +2318,19 @@ export default function App() {
                           <p className="font-bold text-slate-900 text-sm">{usr.email}</p>
                           <p className="text-xs text-slate-500">Created: {usr.createdAt?.substring(0, 10)}</p>
                         </div>
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full Ksh ${usr.role === 'Admin' ? 'bg-slate-900 text-white' : usr.role === 'Manager' ? 'bg-teal-700 text-white' : 'bg-emerald-700 text-white'}`}>
-                          {usr.role}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${usr.role === 'Admin' ? 'bg-slate-900 text-white' : usr.role === 'Manager' ? 'bg-teal-700 text-white' : 'bg-emerald-700 text-white'}`}>
+                            {usr.role}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFarmUser(usr.id, usr.email)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
