@@ -430,7 +430,7 @@ export default function App() {
     if (clean === 'manager' || clean === 'farmmanager') return 'manager@sunnyacres.farm';
     if (clean === 'mama' || clean === 'farmer') return 'farmer.mama@sunnyacres.farm';
     if (clean.includes('@')) return clean;
-    return `${clean}@sunnyacres.farm`;
+    return `Ksh ${clean}@sunnyacres.farm`;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -466,11 +466,11 @@ export default function App() {
 
     try {
       await signInWithEmailAndPassword(auth, emailCred, passCred);
-      showToast(`Logged in as ${role.toUpperCase()}`);
+      showToast(`Logged in as Ksh ${role.toUpperCase()}`);
     } catch {
       try {
         await createUserWithEmailAndPassword(auth, emailCred, passCred);
-        showToast(`Created & logged in as ${role.toUpperCase()}`);
+        showToast(`Created & logged in as Ksh ${role.toUpperCase()}`);
       } catch (err: any) {
         setAuthError(err.message);
       }
@@ -503,10 +503,10 @@ export default function App() {
       setNewAccountEmail('');
       setNewAccountPassword('');
       setCreatingAccount(false);
-      showToast(`Account "${resolvedEmail}" created and synced to Firebase.`);
+      showToast(`Account "Ksh ${resolvedEmail}" created and synced to Firebase.`);
     } catch (err: any) {
       setCreatingAccount(false);
-      showToast(`Failed to create account: ${err.message || err}`);
+      showToast(`Failed to create account: Ksh ${err.message || err}`);
     }
   };
 
@@ -619,7 +619,7 @@ export default function App() {
       setCowTag('');
       setCowNotes('');
       setModalOpen(null);
-      showToast(`Cow "${cowName}" added successfully.`);
+      showToast(`Cow "Ksh ${cowName}" added successfully.`);
     } catch (err: unknown) {
       showToast('Failed to add cow.');
     }
@@ -644,7 +644,7 @@ export default function App() {
           totalLiters: total,
           notes: milkNotes,
         });
-        showToast(`Milk record updated successfully (${total} Liters).`);
+        showToast(`Milk record updated successfully (Ksh ${total} Liters).`);
       } else {
         await addDoc(collection(db, 'milk_production'), {
           userId: user.uid,
@@ -657,7 +657,7 @@ export default function App() {
           notes: milkNotes,
           createdAt: new Date().toISOString()
         });
-        showToast(`Milk recorded: ${total} Liters.`);
+        showToast(`Milk recorded: Ksh ${total} Liters.`);
       }
       setMorningLiters('');
       setEveningLiters('');
@@ -695,7 +695,7 @@ export default function App() {
           netEggs: net,
           notes: eggNotes,
         });
-        showToast(`Egg collection updated successfully (${net} good eggs).`);
+        showToast(`Egg collection updated successfully (Ksh ${net} good eggs).`);
       } else {
         await addDoc(collection(db, 'egg_collection'), {
           userId: user.uid,
@@ -706,7 +706,7 @@ export default function App() {
           notes: eggNotes,
           createdAt: new Date().toISOString()
         });
-        showToast(`Egg collection recorded: ${net} good eggs.`);
+        showToast(`Egg collection recorded: Ksh ${net} good eggs.`);
       }
       setTotalEggs('');
       setBrokenEggs('0');
@@ -754,7 +754,7 @@ export default function App() {
       setMilkSaleNotes('');
       setMilkPaymentStatus('Paid');
       setModalOpen(null);
-      showToast(`Milk sale recorded: $${total.toFixed(2)} (${milkPaymentMethod} - ${milkPaymentStatus}).`);
+      showToast(`Milk sale recorded: $Ksh ${total.toFixed(2)} (Ksh ${milkPaymentMethod} - Ksh ${milkPaymentStatus}).`);
     } catch (err: unknown) {
       showToast('Failed to save milk sale.');
     }
@@ -789,7 +789,7 @@ export default function App() {
       setEggSaleNotes('');
       setEggPaymentStatus('Paid');
       setModalOpen(null);
-      showToast(`Egg sale recorded: $${total.toFixed(2)} (${eggPaymentMethod} - ${eggPaymentStatus}).`);
+      showToast(`Egg sale recorded: $Ksh ${total.toFixed(2)} (Ksh ${eggPaymentMethod} - Ksh ${eggPaymentStatus}).`);
     } catch (err: unknown) {
       showToast('Failed to save egg sale.');
     }
@@ -811,7 +811,7 @@ export default function App() {
           mpesaCode: expenseMpesaCode,
           notes: expenseNotes,
         });
-        showToast(`Expense updated successfully ($${amt.toFixed(2)}).`);
+        showToast(`Expense updated successfully ($Ksh ${amt.toFixed(2)}).`);
       } else {
         await addDoc(collection(db, 'expenses'), {
           userId: user.uid,
@@ -824,7 +824,7 @@ export default function App() {
           notes: expenseNotes,
           createdAt: new Date().toISOString()
         });
-        showToast(`Expense paid via ${expensePaymentMethod}: $${amt.toFixed(2)}.`);
+        showToast(`Expense paid via Ksh ${expensePaymentMethod}: $Ksh ${amt.toFixed(2)}.`);
       }
       setExpenseAmount('');
       setExpenseVendor('');
@@ -948,7 +948,7 @@ export default function App() {
 
   const monthlyAggregates = monthNames.map((monthName, index) => {
     const monthIndexStr = String(index + 1).padStart(2, '0');
-    const yearPrefix = `${selectedYear}-${monthIndexStr}`;
+    const yearPrefix = `Ksh ${selectedYear}-Ksh ${monthIndexStr}`;
 
     const mTotal = milkRecords
       .filter((r: MilkProduction) => r.date && r.date.startsWith(yearPrefix))
@@ -986,6 +986,12 @@ export default function App() {
   const activeCowsCount = cows.filter((c: Cow) => c.status === 'Active').length;
   const isAdmin = user?.email?.includes('admin');
   const isManager = user?.email?.includes('manager') || isAdmin;
+
+  useEffect(() => {
+    if (!isManager && (activeTab === 'sales' || activeTab === 'reports' || activeTab === 'admin')) {
+      setActiveTab('dashboard');
+    }
+  }, [isManager, activeTab]);
 
   if (authLoading) {
     return (
@@ -1123,7 +1129,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold Ksh ${isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
               {isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-600" /> : <WifiOff className="w-3.5 h-3.5 text-amber-600" />}
               <span>{isOnline ? 'Online (Synced)' : 'Offline (Saved Locally)'}</span>
             </div>
@@ -1168,57 +1174,61 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'dashboard' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <TrendingUp className="w-4 h-4" /> Overview & Summaries
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('cows')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'cows' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'cows' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <Database className="w-4 h-4" /> Cows ({activeCowsCount})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('milk')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'milk' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'milk' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <Milk className="w-4 h-4" /> Milk Production
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('eggs')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'eggs' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'eggs' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <Egg className="w-4 h-4" /> Egg Collection
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('sales')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'sales' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            <DollarSign className="w-4 h-4" /> Sales Log
-          </button>
+          {isManager && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('sales')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'sales' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              <DollarSign className="w-4 h-4" /> Sales Log
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setActiveTab('expenses')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'expenses' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'expenses' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <CreditCard className="w-4 h-4" /> Expenses Log
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('reports')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'reports' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            <FileText className="w-4 h-4" /> Reports & Analytics
-          </button>
+          {isManager && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'reports' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              <FileText className="w-4 h-4" /> Reports & Analytics
+            </button>
+          )}
           {isAdmin && (
             <button
               type="button"
               onClick={() => setActiveTab('admin')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 Ksh ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <UserCheck className="w-4 h-4" /> System Admin
             </button>
@@ -1364,7 +1374,7 @@ export default function App() {
                     <span className="text-xs font-semibold bg-blue-50 text-blue-800 px-2.5 py-1 rounded-full">Daily Total</span>
                   </div>
                   <p className="text-slate-500 text-sm font-medium">Milk Sales Revenue</p>
-                  <h3 className="text-3xl font-bold text-slate-900 mt-1">${todayMilkSalesAmount.toFixed(2)}</h3>
+                  <h3 className="text-3xl font-bold text-slate-900 mt-1">Ksh ${todayMilkSalesAmount.toFixed(2)}</h3>
                 </div>
 
                 <div onClick={() => setActiveTab('sales')} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-purple-600 cursor-pointer transition-all hover:shadow-md group">
@@ -1375,7 +1385,7 @@ export default function App() {
                     <span className="text-xs font-semibold bg-purple-50 text-purple-800 px-2.5 py-1 rounded-full">Daily Total</span>
                   </div>
                   <p className="text-slate-500 text-sm font-medium">Egg Sales Revenue</p>
-                  <h3 className="text-3xl font-bold text-slate-900 mt-1">${todayEggSalesAmount.toFixed(2)}</h3>
+                  <h3 className="text-3xl font-bold text-slate-900 mt-1">Ksh ${todayEggSalesAmount.toFixed(2)}</h3>
                 </div>
               </div>
             </div>
@@ -1395,11 +1405,11 @@ export default function App() {
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <p className="text-slate-500 text-sm font-medium">Weekly Milk Revenue</p>
-                  <h3 className="text-2xl font-bold text-blue-800 mt-1">${weeklyMilkSalesAmount.toFixed(2)}</h3>
+                  <h3 className="text-2xl font-bold text-blue-800 mt-1">Ksh ${weeklyMilkSalesAmount.toFixed(2)}</h3>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <p className="text-slate-500 text-sm font-medium">Weekly Egg Revenue</p>
-                  <h3 className="text-2xl font-bold text-purple-800 mt-1">${weeklyEggSalesAmount.toFixed(2)}</h3>
+                  <h3 className="text-2xl font-bold text-purple-800 mt-1">Ksh ${weeklyEggSalesAmount.toFixed(2)}</h3>
                 </div>
               </div>
             </div>
@@ -1531,15 +1541,15 @@ export default function App() {
                           <div className="flex items-center gap-3">
                             <div className="bg-slate-100 text-slate-700 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg relative">
                               🐄
-                              <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${dotColor}`} />
+                              <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white Ksh ${dotColor}`} />
                             </div>
                             <div>
                               <h3 className="font-bold text-slate-900 text-lg">{cow.name}</h3>
                               <p className="text-xs text-slate-500">Tag: {cow.tagNumber} · {cow.breed}</p>
                             </div>
                           </div>
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 ${statusBg}`}>
-                            <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 Ksh ${statusBg}`}>
+                            <span className={`w-2 h-2 rounded-full Ksh ${dotColor}`} />
                             {cow.status}
                           </span>
                         </div>
@@ -1556,7 +1566,7 @@ export default function App() {
                           onClick={() => {
                             const nextStatus = cow.status === 'Active' ? 'Dry' : cow.status === 'Dry' ? 'Sold' : 'Active';
                             updateDoc(doc(db, 'cows', cow.id), { status: nextStatus });
-                            showToast(`Cow status updated to ${nextStatus}`);
+                            showToast(`Cow status updated to Ksh ${nextStatus}`);
                           }}
                           className="text-xs font-semibold text-emerald-700 hover:underline"
                         >
@@ -1788,7 +1798,7 @@ export default function App() {
                           <th className="p-3">Date</th>
                           <th className="p-3">Liters & Buyer</th>
                           <th className="p-3">Method & Status</th>
-                          <th className="p-3">Total ($)</th>
+                          <th className="p-3">Total (Ksh)</th>
                           <th className="p-3 text-right">Action</th>
                         </tr>
                       </thead>
@@ -1802,11 +1812,11 @@ export default function App() {
                             </td>
                             <td className="p-3">
                               <span className="text-xs font-medium text-slate-700 block">{s.paymentMethod || 'Cash'}</span>
-                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${s.paymentStatus === 'Outstanding' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 Ksh ${s.paymentStatus === 'Outstanding' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                                 {s.paymentStatus || 'Paid'}
                               </span>
                             </td>
-                            <td className="p-3 font-bold text-blue-800">${s.totalAmount.toFixed(2)}</td>
+                            <td className="p-3 font-bold text-blue-800">Ksh ${s.totalAmount.toFixed(2)}</td>
                             <td className="p-3 text-right">
                               <button type="button" onClick={() => handleDeleteItem('milk_sales', s.id)} className="text-red-600 p-1">
                                 <Trash2 className="w-4 h-4" />
@@ -1836,7 +1846,7 @@ export default function App() {
                           <th className="p-3">Date</th>
                           <th className="p-3">Qty & Buyer</th>
                           <th className="p-3">Method & Status</th>
-                          <th className="p-3">Total ($)</th>
+                          <th className="p-3">Total (Ksh)</th>
                           <th className="p-3 text-right">Action</th>
                         </tr>
                       </thead>
@@ -1850,11 +1860,11 @@ export default function App() {
                             </td>
                             <td className="p-3">
                               <span className="text-xs font-medium text-slate-700 block">{s.paymentMethod || 'Cash'}</span>
-                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${s.paymentStatus === 'Outstanding' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 Ksh ${s.paymentStatus === 'Outstanding' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                                 {s.paymentStatus || 'Paid'}
                               </span>
                             </td>
-                            <td className="p-3 font-bold text-purple-800">${s.totalAmount.toFixed(2)}</td>
+                            <td className="p-3 font-bold text-purple-800">Ksh ${s.totalAmount.toFixed(2)}</td>
                             <td className="p-3 text-right">
                               <button type="button" onClick={() => handleDeleteItem('egg_sales', s.id)} className="text-red-600 p-1">
                                 <Trash2 className="w-4 h-4" />
@@ -1915,7 +1925,7 @@ export default function App() {
                         <th className="p-4">Date</th>
                         <th className="p-4">Category</th>
                         <th className="p-4">Vendor / Paid To</th>
-                        <th className="p-4">Amount ($)</th>
+                        <th className="p-4">Amount (Ksh)</th>
                         <th className="p-4">Notes</th>
                         <th className="p-4 text-right">Actions</th>
                       </tr>
@@ -1930,7 +1940,7 @@ export default function App() {
                             </span>
                           </td>
                           <td className="p-4 font-bold text-slate-900">{e.vendor}</td>
-                          <td className="p-4 font-bold text-red-700">${e.amount.toFixed(2)}</td>
+                          <td className="p-4 font-bold text-red-700">Ksh ${e.amount.toFixed(2)}</td>
                           <td className="p-4 text-slate-500 max-w-xs truncate">{e.notes || '-'}</td>
                           <td className="p-4 text-right space-x-2">
                             <button
@@ -1981,16 +1991,16 @@ export default function App() {
                 onClick={() => {
                   const csvData = [
                     ['Type', 'Date', 'Detail 1', 'Detail 2', 'Total/Amount'],
-                    ...milkRecords.map((r: MilkProduction) => ['Milk Production', r.date, r.cowName, `${r.totalLiters} Liters`, '-']),
-                    ...eggRecords.map((r: EggCollection) => ['Egg Collection', r.date, `Total: ${r.totalEggs}`, `Net: ${r.netEggs}`, '-']),
-                    ...milkSales.map((r: MilkSale) => ['Milk Sale', r.date, `${r.litersSold} L`, r.buyer, `$${r.totalAmount}`]),
-                    ...eggSales.map((r: EggSale) => ['Egg Sale', r.date, `${r.quantity} ${r.unit}`, r.buyer, `$${r.totalAmount}`])
+                    ...milkRecords.map((r: MilkProduction) => ['Milk Production', r.date, r.cowName, `Ksh ${r.totalLiters} Liters`, '-']),
+                    ...eggRecords.map((r: EggCollection) => ['Egg Collection', r.date, `Total: Ksh ${r.totalEggs}`, `Net: Ksh ${r.netEggs}`, '-']),
+                    ...milkSales.map((r: MilkSale) => ['Milk Sale', r.date, `Ksh ${r.litersSold} L`, r.buyer, `$Ksh ${r.totalAmount}`]),
+                    ...eggSales.map((r: EggSale) => ['Egg Sale', r.date, `Ksh ${r.quantity} Ksh ${r.unit}`, r.buyer, `$Ksh ${r.totalAmount}`])
                   ];
                   const csvContent = 'data:text/csv;charset=utf-8,' + csvData.map((e: string[]) => e.join(',')).join('\n');
                   const encodedUri = encodeURI(csvContent);
                   const link = document.createElement('a');
                   link.setAttribute('href', encodedUri);
-                  link.setAttribute('download', `sunny_acres_farm_report_${todayStr}.csv`);
+                  link.setAttribute('download', `sunny_acres_farm_report_Ksh ${todayStr}.csv`);
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
@@ -2006,21 +2016,21 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setReportSubTab('daily')}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${reportSubTab === 'daily' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all Ksh ${reportSubTab === 'daily' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               >
                 Daily Summary
               </button>
               <button
                 type="button"
                 onClick={() => setReportSubTab('weekly')}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${reportSubTab === 'weekly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all Ksh ${reportSubTab === 'weekly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               >
                 Weekly Review
               </button>
               <button
                 type="button"
                 onClick={() => setReportSubTab('monthly')}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${reportSubTab === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all Ksh ${reportSubTab === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               >
                 Monthly Trends
               </button>
@@ -2042,11 +2052,11 @@ export default function App() {
                   </div>
                   <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-200">
                     <p className="text-xs font-semibold text-blue-800">Milk Sales Revenue</p>
-                    <p className="text-2xl font-bold text-blue-900 mt-1">${todayMilkSalesAmount.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-900 mt-1">Ksh ${todayMilkSalesAmount.toFixed(2)}</p>
                   </div>
                   <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-200">
                     <p className="text-xs font-semibold text-purple-800">Egg Sales Revenue</p>
-                    <p className="text-2xl font-bold text-purple-900 mt-1">${todayEggSalesAmount.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-purple-900 mt-1">Ksh ${todayEggSalesAmount.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -2068,11 +2078,11 @@ export default function App() {
                   </div>
                   <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-200">
                     <p className="text-xs font-semibold text-blue-800">Weekly Milk Revenue</p>
-                    <p className="text-2xl font-bold text-blue-900 mt-1">${weeklyMilkSalesAmount.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-900 mt-1">Ksh ${weeklyMilkSalesAmount.toFixed(2)}</p>
                   </div>
                   <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-200">
                     <p className="text-xs font-semibold text-purple-800">Weekly Egg Revenue</p>
-                    <p className="text-2xl font-bold text-purple-900 mt-1">${weeklyEggSalesAmount.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-purple-900 mt-1">Ksh ${weeklyEggSalesAmount.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -2108,20 +2118,20 @@ export default function App() {
                         <th className="p-4">Month</th>
                         <th className="p-4">Milk Produced (L)</th>
                         <th className="p-4">Eggs Collected</th>
-                        <th className="p-4">Milk Revenue ($)</th>
-                        <th className="p-4">Egg Revenue ($)</th>
-                        <th className="p-4 text-right">Total Revenue ($)</th>
+                        <th className="p-4">Milk Revenue (Ksh)</th>
+                        <th className="p-4">Egg Revenue (Ksh)</th>
+                        <th className="p-4 text-right">Total Revenue (Ksh)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
                       {monthlyAggregates.map((row) => (
                         <tr key={row.monthName} className="hover:bg-slate-50/50">
                           <td className="p-4 font-bold text-slate-900">{row.monthName}</td>
-                          <td className="p-4 text-emerald-800 font-semibold">{row.milkLiters > 0 ? `${row.milkLiters.toFixed(1)} L` : '-'}</td>
-                          <td className="p-4 text-amber-700 font-semibold">{row.eggsCollected > 0 ? `${row.eggsCollected} eggs` : '-'}</td>
-                          <td className="p-4 text-blue-800 font-medium">{row.milkRevenue > 0 ? `$${row.milkRevenue.toFixed(2)}` : '-'}</td>
-                          <td className="p-4 text-purple-800 font-medium">{row.eggRevenue > 0 ? `$${row.eggRevenue.toFixed(2)}` : '-'}</td>
-                          <td className="p-4 text-right font-bold text-slate-900">{row.totalRevenue > 0 ? `$${row.totalRevenue.toFixed(2)}` : '-'}</td>
+                          <td className="p-4 text-emerald-800 font-semibold">{row.milkLiters > 0 ? `Ksh ${row.milkLiters.toFixed(1)} L` : '-'}</td>
+                          <td className="p-4 text-amber-700 font-semibold">{row.eggsCollected > 0 ? `Ksh ${row.eggsCollected} eggs` : '-'}</td>
+                          <td className="p-4 text-blue-800 font-medium">{row.milkRevenue > 0 ? `$Ksh ${row.milkRevenue.toFixed(2)}` : '-'}</td>
+                          <td className="p-4 text-purple-800 font-medium">{row.eggRevenue > 0 ? `$Ksh ${row.eggRevenue.toFixed(2)}` : '-'}</td>
+                          <td className="p-4 text-right font-bold text-slate-900">{row.totalRevenue > 0 ? `$Ksh ${row.totalRevenue.toFixed(2)}` : '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -2135,13 +2145,13 @@ export default function App() {
                           {monthlyAggregates.reduce((acc, r) => acc + r.eggsCollected, 0)} eggs
                         </td>
                         <td className="p-4 text-blue-900">
-                          ${monthlyAggregates.reduce((acc, r) => acc + r.milkRevenue, 0).toFixed(2)}
+                          Ksh ${monthlyAggregates.reduce((acc, r) => acc + r.milkRevenue, 0).toFixed(2)}
                         </td>
                         <td className="p-4 text-purple-900">
-                          ${monthlyAggregates.reduce((acc, r) => acc + r.eggRevenue, 0).toFixed(2)}
+                          Ksh ${monthlyAggregates.reduce((acc, r) => acc + r.eggRevenue, 0).toFixed(2)}
                         </td>
                         <td className="p-4 text-right text-indigo-950">
-                          ${monthlyAggregates.reduce((acc, r) => acc + r.totalRevenue, 0).toFixed(2)}
+                          Ksh ${monthlyAggregates.reduce((acc, r) => acc + r.totalRevenue, 0).toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>
@@ -2162,19 +2172,19 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
                   <p className="text-xs font-semibold text-emerald-800">Total Paid Revenue</p>
-                  <p className="text-2xl font-bold text-emerald-900 mt-1">${totalPaidRevenue.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-emerald-900 mt-1">Ksh ${totalPaidRevenue.toFixed(2)}</p>
                 </div>
                 <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
                   <p className="text-xs font-semibold text-amber-800">Outstanding (Unpaid) Debt</p>
-                  <p className="text-2xl font-bold text-amber-900 mt-1">${totalOutstandingRevenue.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-amber-900 mt-1">Ksh ${totalOutstandingRevenue.toFixed(2)}</p>
                 </div>
                 <div className="bg-teal-50 p-4 rounded-xl border border-teal-200">
                   <p className="text-xs font-semibold text-teal-800">M-Pesa Revenue</p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">${mpesaRevenue.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-teal-900 mt-1">Ksh ${mpesaRevenue.toFixed(2)}</p>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
                   <p className="text-xs font-semibold text-blue-800">Cash & Other Revenue</p>
-                  <p className="text-2xl font-bold text-blue-900 mt-1">${(cashRevenue + otherRevenue).toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">Ksh ${(cashRevenue + otherRevenue).toFixed(2)}</p>
                 </div>
               </div>
 
@@ -2195,7 +2205,7 @@ export default function App() {
                           <th className="p-3">Type</th>
                           <th className="p-3">Customer / Buyer</th>
                           <th className="p-3">Method</th>
-                          <th className="p-3 text-right">Amount Owed ($)</th>
+                          <th className="p-3 text-right">Amount Owed (Ksh)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
@@ -2203,13 +2213,13 @@ export default function App() {
                           <tr key={s.id} className="hover:bg-amber-50/40">
                             <td className="p-3 font-medium">{s.date}</td>
                             <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.saleType === 'Milk' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold Ksh ${s.saleType === 'Milk' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
                                 {s.saleType}
                               </span>
                             </td>
                             <td className="p-3 font-bold text-slate-900">{s.buyer}</td>
                             <td className="p-3 text-slate-600">{s.paymentMethod || 'Cash'}</td>
-                            <td className="p-3 text-right font-bold text-amber-700">${s.totalAmount.toFixed(2)}</td>
+                            <td className="p-3 text-right font-bold text-amber-700">Ksh ${s.totalAmount.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2298,7 +2308,7 @@ export default function App() {
                           <p className="font-bold text-slate-900 text-sm">{usr.email}</p>
                           <p className="text-xs text-slate-500">Created: {usr.createdAt?.substring(0, 10)}</p>
                         </div>
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${usr.role === 'Admin' ? 'bg-slate-900 text-white' : usr.role === 'Manager' ? 'bg-teal-700 text-white' : 'bg-emerald-700 text-white'}`}>
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full Ksh ${usr.role === 'Admin' ? 'bg-slate-900 text-white' : usr.role === 'Manager' ? 'bg-teal-700 text-white' : 'bg-emerald-700 text-white'}`}>
                           {usr.role}
                         </span>
                       </div>
@@ -2316,7 +2326,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'dashboard' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'dashboard' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
         >
           <TrendingUp className="w-5 h-5 mb-1" />
           <span className="text-[10px]">Overview</span>
@@ -2324,7 +2334,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveTab('cows')}
-          className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'cows' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'cows' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
         >
           <Database className="w-5 h-5 mb-1" />
           <span className="text-[10px]">Cows</span>
@@ -2332,7 +2342,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveTab('milk')}
-          className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'milk' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'milk' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
         >
           <Milk className="w-5 h-5 mb-1" />
           <span className="text-[10px]">Milk</span>
@@ -2340,27 +2350,39 @@ export default function App() {
         <button
           type="button"
           onClick={() => setActiveTab('eggs')}
-          className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'eggs' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'eggs' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
         >
           <Egg className="w-5 h-5 mb-1" />
           <span className="text-[10px]">Eggs</span>
         </button>
+        {isManager && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('sales')}
+            className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'sales' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          >
+            <DollarSign className="w-5 h-5 mb-1" />
+            <span className="text-[10px]">Sales</span>
+          </button>
+        )}
         <button
           type="button"
-          onClick={() => setActiveTab('sales')}
-          className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'sales' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          onClick={() => setActiveTab('expenses')}
+          className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'expenses' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
         >
-          <DollarSign className="w-5 h-5 mb-1" />
-          <span className="text-[10px]">Sales</span>
+          <CreditCard className="w-5 h-5 mb-1" />
+          <span className="text-[10px]">Expenses</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('reports')}
-          className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'reports' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
-        >
-          <FileText className="w-5 h-5 mb-1" />
-          <span className="text-[10px]">Reports</span>
-        </button>
+        {isManager && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('reports')}
+            className={`flex flex-col items-center justify-center w-full h-full Ksh ${activeTab === 'reports' ? 'text-emerald-800 font-bold' : 'text-slate-500 font-medium'}`}
+          >
+            <FileText className="w-5 h-5 mb-1" />
+            <span className="text-[10px]">Reports</span>
+          </button>
+        )}
       </div>
 
       {/* Modals */}
@@ -2656,7 +2678,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Price per Liter ($)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Price per Liter (Ksh)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -2793,7 +2815,7 @@ export default function App() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Price per Unit ($)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Price per Unit (Ksh)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -2921,7 +2943,7 @@ export default function App() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Amount ($)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Amount (Ksh)</label>
                   <input
                     type="number"
                     step="0.01"
