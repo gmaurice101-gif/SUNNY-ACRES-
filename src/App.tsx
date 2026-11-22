@@ -188,7 +188,6 @@ export default function App() {
   // Login states
   const [usernameInput, setUsernameInput] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const [isSignUp, setIsSignUp] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
 
   // Online / Offline Status tracker
@@ -438,42 +437,10 @@ export default function App() {
     setAuthError('');
     const resolved = resolveEmail(usernameInput);
     try {
-      if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, resolved, password);
-        showToast('Account created successfully.');
-      } else {
-        await signInWithEmailAndPassword(auth, resolved, password);
-        showToast('Successfully logged in.');
-      }
+      await signInWithEmailAndPassword(auth, resolved, password);
+      showToast('Successfully logged in.');
     } catch (err: any) {
       setAuthError(err.message || 'Authentication failed');
-    }
-  };
-
-  const handleQuickLogin = async (role: 'admin' | 'manager' | 'mama') => {
-    let emailCred = 'farmer.mama@sunnyacres.farm';
-    let passCred = 'FarmMama2026!';
-    if (role === 'admin') {
-      emailCred = 'admin@sunnyacres.farm';
-      passCred = 'AdminPass2026!';
-    } else if (role === 'manager') {
-      emailCred = 'manager@sunnyacres.farm';
-      passCred = 'ManagerPass2026!';
-    }
-
-    setUsernameInput(emailCred);
-    setPassword(passCred);
-
-    try {
-      await signInWithEmailAndPassword(auth, emailCred, passCred);
-      showToast(`Logged in as Ksh ${role.toUpperCase()}`);
-    } catch {
-      try {
-        await createUserWithEmailAndPassword(auth, emailCred, passCred);
-        showToast(`Created & logged in as Ksh ${role.toUpperCase()}`);
-      } catch (err: any) {
-        setAuthError(err.message);
-      }
     }
   };
 
@@ -1026,48 +993,6 @@ export default function App() {
             <p className="text-slate-600 text-sm mt-1">Farm Management System · Sign In</p>
           </div>
 
-          <div className="bg-emerald-50 p-4 rounded-2xl mb-6 border border-emerald-200 space-y-2">
-            <p className="text-xs text-emerald-800 font-semibold text-center mb-1">
-              Quick Login Accounts:
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('mama')}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold py-2.5 px-2 rounded-xl transition-colors shadow text-center"
-              >
-                Farmer Mama
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('manager')}
-                className="bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold py-2.5 px-2 rounded-xl transition-colors shadow text-center"
-              >
-                Farm Manager
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 px-2 rounded-xl transition-colors shadow text-center"
-              >
-                System Admin
-              </button>
-            </div>
-          </div>
-
-          <div className="relative flex py-2 items-center mb-4">
-            <div className="flex-grow border-t border-slate-200"></div>
-            <span className="flex-shrink mx-4 text-slate-400 text-xs">or enter username / email</span>
-            <div className="flex-grow border-t border-slate-200"></div>
-          </div>
-
-          {authError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span>{authError}</span>
-            </div>
-          )}
-
           <form onSubmit={handleAuth} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Username or Email</label>
@@ -1076,7 +1001,7 @@ export default function App() {
                 required
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="admin, manager, or mama"
+                placeholder="e.g. admin or worker@sunnyacres.farm"
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base"
               />
             </div>
@@ -1096,19 +1021,9 @@ export default function App() {
               type="submit"
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl transition-colors text-base min-h-[48px] shadow"
             >
-              {isSignUp ? 'Create Account' : 'Log In'}
+              Log In
             </button>
           </form>
-
-          <div className="text-center mt-6">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-emerald-700 hover:underline font-medium"
-            >
-              {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
-            </button>
-          </div>
         </div>
       </div>
     );
