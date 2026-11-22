@@ -314,7 +314,7 @@ export default function App() {
     setLoadingData(true);
 
     const unsubCows = onSnapshot(
-      query(collection(db, 'cows'), where('userId', '==', user.uid)),
+      collection(db, 'cows'),
       (snapshot: QuerySnapshot) => {
         const list: Cow[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as Cow));
         setCows(list);
@@ -326,7 +326,7 @@ export default function App() {
     );
 
     const unsubMilk = onSnapshot(
-      query(collection(db, 'milk_production'), where('userId', '==', user.uid)),
+      collection(db, 'milk_production'),
       (snapshot: QuerySnapshot) => {
         const list: MilkProduction[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as MilkProduction));
         setMilkRecords(list.sort((a, b) => b.date.localeCompare(a.date)));
@@ -335,7 +335,7 @@ export default function App() {
     );
 
     const unsubEggs = onSnapshot(
-      query(collection(db, 'egg_collection'), where('userId', '==', user.uid)),
+      collection(db, 'egg_collection'),
       (snapshot: QuerySnapshot) => {
         const list: EggCollection[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as EggCollection));
         setEggRecords(list.sort((a, b) => b.date.localeCompare(a.date)));
@@ -344,7 +344,7 @@ export default function App() {
     );
 
     const unsubMilkSales = onSnapshot(
-      query(collection(db, 'milk_sales'), where('userId', '==', user.uid)),
+      collection(db, 'milk_sales'),
       (snapshot: QuerySnapshot) => {
         const list: MilkSale[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as MilkSale));
         setMilkSales(list.sort((a, b) => b.date.localeCompare(a.date)));
@@ -353,7 +353,7 @@ export default function App() {
     );
 
     const unsubEggSales = onSnapshot(
-      query(collection(db, 'egg_sales'), where('userId', '==', user.uid)),
+      collection(db, 'egg_sales'),
       (snapshot: QuerySnapshot) => {
         const list: EggSale[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as EggSale));
         setEggSales(list.sort((a, b) => b.date.localeCompare(a.date)));
@@ -362,7 +362,7 @@ export default function App() {
     );
 
     const unsubExpenses = onSnapshot(
-      query(collection(db, 'expenses'), where('userId', '==', user.uid)),
+      collection(db, 'expenses'),
       (snapshot: QuerySnapshot) => {
         const list: Expense[] = snapshot.docs.map((docItem: any) => ({ id: docItem.id, ...docItem.data() } as Expense));
         setExpenses(list.sort((a, b) => b.date.localeCompare(a.date)));
