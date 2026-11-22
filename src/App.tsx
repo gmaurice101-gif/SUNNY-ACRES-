@@ -52,7 +52,9 @@ import {
   RefreshCw,
   UserPlus,
   CreditCard,
-  TrendingDown
+  TrendingDown,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Initialize Primary Firebase
@@ -188,6 +190,7 @@ export default function App() {
   // Login states
   const [usernameInput, setUsernameInput] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
 
   // Online / Offline Status tracker
@@ -214,6 +217,7 @@ export default function App() {
   // Admin account creation form states
   const [newAccountEmail, setNewAccountEmail] = useState<string>('');
   const [newAccountPassword, setNewAccountPassword] = useState<string>('');
+  const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
   const [newAccountRole, setNewAccountRole] = useState<'Admin' | 'Manager' | 'Farmer'>('Farmer');
   const [creatingAccount, setCreatingAccount] = useState<boolean>(false);
 
@@ -429,7 +433,7 @@ export default function App() {
     if (clean === 'manager' || clean === 'farmmanager') return 'manager@sunnyacres.farm';
     if (clean === 'mama' || clean === 'farmer') return 'farmer.mama@sunnyacres.farm';
     if (clean.includes('@')) return clean;
-    return `Ksh ${clean}@sunnyacres.farm`;
+    return `${clean}@sunnyacres.farm`;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -1007,14 +1011,24 @@ export default function App() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 p-1"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -1423,6 +1437,20 @@ export default function App() {
                   <span className="font-bold text-slate-900 text-base">Record Expense</span>
                   <span className="text-xs text-slate-500 mt-0.5">Track feed, meds & utilities</span>
                 </button>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('admin')}
+                    className="p-5 rounded-xl border-2 border-dashed border-slate-400 bg-slate-100 hover:bg-slate-200 hover:border-slate-800 transition-all flex flex-col items-center text-center group min-h-[110px] justify-center"
+                  >
+                    <div className="bg-slate-900 text-white p-3 rounded-xl mb-2">
+                      <UserPlus className="w-6 h-6" />
+                    </div>
+                    <span className="font-bold text-slate-900 text-base">Quick Add New Account</span>
+                    <span className="text-xs text-slate-500 mt-0.5">Create staff & manager logins</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -2188,14 +2216,24 @@ export default function App() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={newAccountPassword}
-                      onChange={(e) => setNewAccountPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl text-base focus:ring-2 focus:ring-emerald-600"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showAdminPassword ? 'text' : 'password'}
+                        required
+                        value={newAccountPassword}
+                        onChange={(e) => setNewAccountPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl text-base focus:ring-2 focus:ring-emerald-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 p-1"
+                        title={showAdminPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showAdminPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">Assign Role</label>
