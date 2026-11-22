@@ -965,8 +965,12 @@ export default function App() {
   });
 
   const activeCowsCount = cows.filter((c: Cow) => c.status === 'Active').length;
-  const isAdmin = user?.email?.includes('admin');
-  const isManager = user?.email?.includes('manager') || isAdmin;
+  
+  const currentUserRecord = farmUsers.find(u => u.email.toLowerCase() === user?.email?.toLowerCase());
+  const userRole = currentUserRecord?.role || (user?.email?.includes('admin') ? 'Admin' : user?.email?.includes('manager') ? 'Manager' : 'Farmer');
+
+  const isAdmin = userRole === 'Admin';
+  const isManager = userRole === 'Manager' || isAdmin;
 
   useEffect(() => {
     if (!isManager && (activeTab === 'sales' || activeTab === 'reports' || activeTab === 'admin')) {
